@@ -41,9 +41,8 @@ class TgBotClass
     public function get_data($dataInput) {
         $this->DATA = json_decode($dataInput, true);
         $this->MSG_INFO['update_id'] = $this->DATA['update_id'];
-
+        $this->MSG_INFO['msg_type'] = 'message';
         if (isset($this->DATA['message'])) {
-
             $this->MSG_INFO['user_id'] = isset($this->DATA['message']['from']['id']) ? $this->DATA['message']['from']['id'] : 0;
             $this->MSG_INFO['chat_id'] = isset($this->DATA['message']['chat']['id']) ? $this->DATA['message']['chat']['id'] : 0;
             $this->MSG_INFO['message_id'] = $this->DATA["message"]["message_id"];
@@ -56,6 +55,7 @@ class TgBotClass
         }
         // если был ответ под кнопкой
         if (isset($this->DATA['callback_query'])) {
+            $this->MSG_INFO['msg_type'] = 'callback';
             $this->MSG_INFO['user_id'] = isset($this->DATA['callback_query']['from']['id']) ? $this->DATA['callback_query']['from']['id'] : 0;
             $this->MSG_INFO['chat_id'] = isset($this->DATA['callback_query']["message"]['chat']['id']) ? $this->DATA['callback_query']["message"]['chat']['id'] : 0;
             $this->MSG_INFO['message_id'] = $this->DATA["callback_query"]["message"]["message_id"];
@@ -69,7 +69,6 @@ class TgBotClass
         $this->MSG_INFO['name'] = ($this->MSG_INFO['from_first_name'] !== "") ? $this->MSG_INFO['from_first_name'] . " " . $this->MSG_INFO['from_last_name'] : $this->MSG_INFO['from_username'];
 
     }
-
 
 
     // функция отправки сообщени от бота в диалог с юзером

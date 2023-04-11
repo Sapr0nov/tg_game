@@ -18,42 +18,13 @@ $mysqli = $tgBot->MYSQLI;
 $dataInput = file_get_contents('php://input'); // весь ввод перенаправляем в $data
 $data = json_decode($dataInput, true); // декодируем json-закодированные-текстовые данные в PHP-массив
 $tgBot->get_data($dataInput);
-$tgBot->debug($tgBot->MSG_INFO["chat_id"]);
-// получаем все данные
-$update_id = $data['update_id'];
-if (isset($data['message'])) {
-
-    $user_id = isset($data['message']['from']['id']) ? $data['message']['from']['id'] : 0;
-    $chat_id = isset($data['message']['chat']['id']) ? $data['message']['chat']['id'] : 0;
-    $message_id = $data["message"]["message_id"];
-    $from_first_name = isset($data["message"]["from"]['first_name']) ? $data["message"]["from"]['first_name'] : "";
-    $from_last_name = isset($data["message"]["from"]['last_name']) ? $data["message"]["from"]['last_name'] : "";
-    $from_username = isset($data["message"]["from"]['username']) ? $data["message"]["from"]['username'] : "";
-    $type = $data["message"]["chat"]['type'];
-    $text = $data['message']["text"];
-    $date = $data['message']["date"];       
-}
-// если был ответ под кнопкой
-if (isset($data['callback_query'])) {
-    $user_id = isset($data['callback_query']['from']['id']) ? $data['callback_query']['from']['id'] : 0;
-    $chat_id = isset($data['callback_query']["message"]['chat']['id']) ? $data['callback_query']["message"]['chat']['id'] : 0;
-    $message_id = $data["callback_query"]["message"]["message_id"];
-    $from_first_name = isset($data["callback_query"]["from"]['first_name']) ? $data["callback_query"]["from"]['first_name'] : "";
-    $from_last_name = isset($data["callback_query"]["from"]['last_name']) ? $data["callback_query"]["from"]['last_name'] : "";
-    $from_username = isset($data["callback_query"]["from"]['username']) ? $data["callback_query"]["from"]['username'] : "";
-    $type = $data["callback_query"]["chat"]['type'];
-    $text = $data["callback_query"]["data"];
-    $date = $data["callback_query"]["date"];
-}
-
-$name = ($from_first_name !== "") ? $from_first_name . " " . $from_last_name : $from_username;
 
 // если указан пользователь проверяем его наличие в базе
-if ($user_id != 0) {
-    $sql = "SELECT `id` FROM `users` WHERE `tid` = '" . $user_id . "';";
+if ($tgBot->MSG_INFO["user_id"] != 0) {
+    $sql = "SELECT `id` FROM `users` WHERE `tid` = '" . $tgBot->MSG_INFO["user_id"] . "';";
     $result = $mysqli->query($sql);
     if ($result->num_rows < 1) {
-        $sql = "INSERT INTO `users` (`tid`, `username`, `first_name`, `last_name`) VALUE (" . $user_id . ", '" . $from_username  . "', '" . $from_first_name ."', '" . $from_last_name . "');";
+        $sql = "INSERT INTO `users` (`tid`, `username`, `first_name`, `last_name`) VALUE (" . $tgBot->MSG_INFO["user_id"] . ", '" . $tgBot->MSG_INFO["from_username"]  . "', '" . $tgBot->MSG_INFO["from_first_name"] ."', '" . $tgBot->MSG_INFO["from_last_name"] . "');";
         $result = $mysqli->query($sql);
         $sql = "SELECT LAST_INSERT_ID();";
         $result = $mysqli->query($sql);
@@ -66,22 +37,16 @@ $row = $result->fetch_row();
 $new_user_id = $row[0];
 
 if ($new_user_id > 0) {
-    $sql = "INSERT INTO `messages` (`msg_id`, `user_id`,`chat_id`,`text`) VALUE (" . $message_id . ", " . $new_user_id . ", " . $tgBot->MSG_INFO["chat_id"] . ", '" . $text . "');";
+    $sql = "INSERT INTO `messages` (`msg_id`, `user_id`,`chat_id`,`text`) VALUE (" . $tgBot->MSG_INFO["message_id"] . ", " . $new_user_id . ", " . $tgBot->MSG_INFO["chat_id"] . ", '" . $tgBot->MSG_INFO["text"] . "');";
     $result = $mysqli->query($sql);    
 }
 
-if (!empty($data['message']['text'])) {
-    $chat_id = $data['message']['chat']['id'];
-    $user_id = $data['message']['from']['id'];
-    $user_name = $data['message']['from']['username'];
-    $first_name = $data['message']['from']['first_name'];
-    $last_name = $data['message']['from']['last_name'];
-    $text = trim($data['message']['text']);
-    $text_array = explode(" ", $text);
+
+if ($tgBot->MSG_INFO['msg_type'] == 'message') {
+ 
+    $text_return = $tgBot->MSG_INFO["text"];
     
-    $text_return = $text;
-    
-    if ($text == 'Очистить чат') {
+    if ($tgBot->MSG_INFO["text"] == 'Очистить чат') {
         $sql = "SELECT `msg_id` FROM `messages` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
         $result = $mysqli->query($sql); 
         while ($row = $result->fetch_row()) {
@@ -95,7 +60,7 @@ if (!empty($data['message']['text'])) {
     }
     
     
-    if ($text == 'Правила') {
+    if ($tgBot->MSG_INFO["text"] == 'Правила') {
         $text_return = "Игра для 4х и более человек. Игроки делаятся на две команды и пытаются объяснить друг другу слова. Следуйте подсказкам на экране";
     }
 
@@ -109,7 +74,7 @@ if (!empty($data['message']['text'])) {
         )
     );
 
-    if ($text == 'Начать игру') {
+    if ($tgBot->MSG_INFO["text"] == 'Начать игру') {
         $reply_markup =  json_encode(array(
             'inline_keyboard' => array(
                 array(
@@ -125,50 +90,25 @@ if (!empty($data['message']['text'])) {
             ),
         ));
     }
-        // клавиатура под сообщением
-        /*
-        $reply_markup =  json_encode(array(
-            'inline_keyboard' => array(
-                array(
-                    array(
-                        'text' => 'Трудоустройство',
-                        'url' => 'https://hh.ru',
-                    ),
-                    array(
-                        'text' => 'Практика',
-                        'callback_data' => 'internship',
-                    ),
-                ),
-                array(
-                    array(
-                        'text' => 'Моя Река',
-                        'url' => 'https://my-river.ru',
-                    ),
-                    array(
-                        'text' => 'Наш сайт',
-                        'url' => 'https://eipp.ru',
-                    ),
-                )
-            ),
-        ));
-        */
+
     $new_msg = $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup);
-    $sql = "INSERT INTO `messages` (`msg_id`, `user_id`,`chat_id`,`text`) VALUE (" . $message_id . ", " . 0 . ", " . $tgBot->MSG_INFO["chat_id"] . ", '" . $text . "');";
+    $sql = "INSERT INTO `messages` (`msg_id`, `user_id`,`chat_id`,`text`) VALUE (" . $tgBot->MSG_INFO["message_id"] . ", " . 0 . ", " . $tgBot->MSG_INFO["chat_id"] . ", '" . $tgBot->MSG_INFO["text"] . "');";
     $result = $mysqli->query($sql);
 
 // этот кусок отлавливает нажатия кнопок под сообщением (если они были посланы)
-}elseif(!empty($data['callback_query'])) {    
+}elseif($tgBot->MSG_INFO['msg_type'] == 'callback') {   
+    $tgBot->debug($tgBot->MSG_INFO["text"]);
     // этот кусок отлавливает нажатия кнопок под сообщением (если они были посланы)
     // есть есть нажатие кнопок клавиатуры (под сообщением)
-    if ($text == 'player_agree') {
+    
+    if ($tgBot->MSG_INFO["text"] == 'player_agree') {
         $text_return = $tgBot->MSG_INFO['name'] . " присоединился к игре.";
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
     }
-    if ($text == 'player_disagree') {
+    if ($tgBot->MSG_INFO["text"] == 'player_disagree') {
         $text_return = $tgBot->MSG_INFO['name'] . " не готов сейчас играть.";
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
     }
 }
-
 
 ?>
