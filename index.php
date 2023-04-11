@@ -2,29 +2,23 @@
 /**
 *   simple chat bot 
 *   03.04.2023
-*   для установки вебхука https://api.telegram.org/bot0000000000:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/setWebhook?url=https://your_site.org/your_bot_code.php
 */
 
 header('Content-Type: text/html; charset=utf-8'); // Выставляем кодировку UTF-8
 $error = "";
 
 
-$SITE_DIR = dirname(__FILE__) . "/" ; // путь к скрипту
-require_once($SITE_DIR . 'env.php'); // наши токены и пароли
+$SITE_DIR = dirname(__FILE__) . "/";
+require_once($SITE_DIR . 'env.php'); 
+require_once($SITE_DIR . 'tg.php');
 
-$mysqli = new mysqli($SQL_SERVER, $SQL_USER, $SQL_PSWD, $SQL_DB);
-if ($mysqli->connect_errno) {
-    $error = $mysqli->connect_error;
-}
+$tgBot = new TgBotClass($BOT_TOKEN, $SQL_SERVER, $SQL_PSWD, $SQL_USER, $SQL_DB, $TABLE);
+$mysqli = $tgBot->MYSQLI;
 
 $dataInput = file_get_contents('php://input'); // весь ввод перенаправляем в $data
 $data = json_decode($dataInput, true); // декодируем json-закодированные-текстовые данные в PHP-массив
-
-//  <DEBUG>   
-$file_message = file_get_contents($SITE_DIR . 'message.txt');
-file_put_contents($SITE_DIR . 'message.txt',  $file_message . PHP_EOL . json_encode($data) . PHP_EOL);
-//  </DEBUG>  
-
+$tgBot->get_data($dataInput);
+$tgBot->debug($tgBot->MSG_INFO["chat_id"]);
 // получаем все данные
 $update_id = $data['update_id'];
 if (isset($data['message'])) {
@@ -72,7 +66,7 @@ $row = $result->fetch_row();
 $new_user_id = $row[0];
 
 if ($new_user_id > 0) {
-    $sql = "INSERT INTO `messages` (`msg_id`, `user_id`,`chat_id`,`text`) VALUE (" . $message_id . ", " . $new_user_id . ", " . $chat_id . ", '" . $text . "');";
+    $sql = "INSERT INTO `messages` (`msg_id`, `user_id`,`chat_id`,`text`) VALUE (" . $message_id . ", " . $new_user_id . ", " . $tgBot->MSG_INFO["chat_id"] . ", '" . $text . "');";
     $result = $mysqli->query($sql);    
 }
 
@@ -88,15 +82,13 @@ if (!empty($data['message']['text'])) {
     $text_return = $text;
     
     if ($text == 'Очистить чат') {
-        $sql = "SELECT `msg_id` FROM `messages` WHERE `chat_id` = '" . $chat_id . "'";
+        $sql = "SELECT `msg_id` FROM `messages` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
         $result = $mysqli->query($sql); 
         while ($row = $result->fetch_row()) {
-            delete_msg_tg($BOT_TOKEN, $chat_id, $row[0]);
-            $file_message = file_get_contents($SITE_DIR . 'message.txt');
-            file_put_contents($SITE_DIR . 'message.txt',  $file_message . PHP_EOL . $sql . PHP_EOL . $row[0]);
+            $tgBot->delete_msg_tg($tgBot->MSG_INFO["chat_id"], $row[0]);
         }
-        $new_msg = msg_to_tg($BOT_TOKEN, $chat_id, "-.- вжух");
-        $sql = "DELETE FROM `messages` WHERE `chat_id` = '" . $chat_id . "'";
+        $new_msg = $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], "-.- вжух");
+        $sql = "DELETE FROM `messages` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
         $result = $mysqli->query($sql); 
 
         return; 
@@ -160,8 +152,8 @@ if (!empty($data['message']['text'])) {
             ),
         ));
         */
-    $new_msg = msg_to_tg($BOT_TOKEN, $chat_id, $text_return, $reply_markup);
-    $sql = "INSERT INTO `messages` (`msg_id`, `user_id`,`chat_id`,`text`) VALUE (" . $message_id . ", " . 0 . ", " . $chat_id . ", '" . $text . "');";
+    $new_msg = $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup);
+    $sql = "INSERT INTO `messages` (`msg_id`, `user_id`,`chat_id`,`text`) VALUE (" . $message_id . ", " . 0 . ", " . $tgBot->MSG_INFO["chat_id"] . ", '" . $text . "');";
     $result = $mysqli->query($sql);
 
 // этот кусок отлавливает нажатия кнопок под сообщением (если они были посланы)
@@ -169,65 +161,13 @@ if (!empty($data['message']['text'])) {
     // этот кусок отлавливает нажатия кнопок под сообщением (если они были посланы)
     // есть есть нажатие кнопок клавиатуры (под сообщением)
     if ($text == 'player_agree') {
-        $text_return = $name . " присоединился к игре.";
-        msg_to_tg($BOT_TOKEN, $chat_id, $text_return);
+        $text_return = $tgBot->MSG_INFO['name'] . " присоединился к игре.";
+        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
     }
     if ($text == 'player_disagree') {
-        $text_return = $name . " не готов сейчас играть.";
-        msg_to_tg($BOT_TOKEN, $chat_id, $text_return);
+        $text_return = $tgBot->MSG_INFO['name'] . " не готов сейчас играть.";
+        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
     }
-}
-
-
-// функция отправки сообщени от бота в диалог с юзером
-function msg_to_tg($BOT_TOKEN, $chat_id, $text, $reply_markup = '') {
-
-    $ch = curl_init();
-    $ch_post = [
-        CURLOPT_URL => 'https://api.telegram.org/bot' . $BOT_TOKEN . '/sendMessage',
-        CURLOPT_POST => TRUE,
-        CURLOPT_RETURNTRANSFER => TRUE,
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_POSTFIELDS => [
-            'chat_id' => $chat_id,
-            'parse_mode' => 'HTML',
-            'text' => $text,
-            'reply_markup' => $reply_markup,
-        ]
-    ];
-
-    curl_setopt_array($ch, $ch_post);
-    $new_msg = curl_exec($ch);
-    curl_close($ch);
-    /*  <DEBUG>   */
-    $file_message = file_get_contents($SITE_DIR . 'update.txt');
-    file_put_contents($SITE_DIR . 'update.txt',  "newmsg = " . $new_msg . PHP_EOL );
-    /*  </DEBUG>   */
-    
-
-    return $new_msg;
-}
-
-
-function delete_msg_tg($BOT_TOKEN, $chat_id, $msg_id) {
-
-    $ch = curl_init();
-    $ch_post = [
-        CURLOPT_URL => 'https://api.telegram.org/bot' . $BOT_TOKEN . '/deleteMessage?chat_id=' . $chat_id . '&message_id=' . $msg_id,
-        CURLOPT_POST => TRUE,
-        CURLOPT_RETURNTRANSFER => TRUE,
-        CURLOPT_TIMEOUT => 10,
-        CURLOPT_POSTFIELDS => [
-            'chat_id' => $chat_id,
-            'parse_mode' => 'HTML',
-            'text' => $text,
-            'reply_markup' => $reply_markup,
-        ]
-    ];
-
-    curl_setopt_array($ch, $ch_post);
-    curl_exec($ch);
-    curl_close($ch);
 }
 
 
