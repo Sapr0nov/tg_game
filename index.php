@@ -52,16 +52,19 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         while ($row = $result->fetch_row()) {
             $tgBot->delete_msg_tg($tgBot->MSG_INFO["chat_id"], $row[0]);
         }
-        $new_msg = $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], "-.- вжух");
         $sql = "DELETE FROM `messages` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
         $result = $mysqli->query($sql); 
 
         return; 
-    }
-    
-    
+    }    
     if ($tgBot->MSG_INFO["text"] == 'Правила') {
         $text_return = "Игра для 4х и более человек. Игроки делаятся на две команды и пытаются объяснить друг другу слова. Следуйте подсказкам на экране";
+    }
+    if ($tgBot->MSG_INFO["text"] == 'Настройки') {
+        $text_return = "В разработке";
+    }
+    if ($tgBot->MSG_INFO["text"] == 'Статистика') {
+        $text_return = "Появится в следующих выпусках";
     }
 
     $reply_markup =  json_encode(array(
@@ -116,10 +119,8 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         ));
     }
 
-    $new_msg = $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup);
-    $sql = "INSERT INTO `messages` (`msg_id`, `user_id`,`chat_id`,`text`) VALUE (" . $tgBot->MSG_INFO["message_id"] . ", " . 0 . ", " . $tgBot->MSG_INFO["chat_id"] . ", '" . $tgBot->MSG_INFO["text"] . "');";
-    $result = $mysqli->query($sql);
-
+    $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup);
+    
 // этот кусок отлавливает нажатия кнопок под сообщением (если они были посланы)
 }elseif($tgBot->MSG_INFO['msg_type'] == 'callback') {   
     // этот кусок отлавливает нажатия кнопок под сообщением (если они были посланы)

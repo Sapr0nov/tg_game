@@ -13,10 +13,9 @@ class TgBotClass
         if ($user !== '') {
             $this->MYSQLI = new mysqli($server, $user, $pswd, $db);
             if ($this->MYSQLI->connect_errno) {
-                $error = $mysqli->connect_error; // TODO output error or save
+                $error = $this->MYSQLI->connect_error; // TODO output error or save
             }
         }
-            
     }
 
     // use only once for set webhook - $path = https://your_site.org/your_bot_path.php
@@ -89,10 +88,15 @@ class TgBotClass
         ];
 
         curl_setopt_array($ch, $ch_post);
-        $new_msg = curl_exec($ch);
+        $reply_txt = curl_exec($ch);
         curl_close($ch);        
 
-        return $new_msg;
+        $reply = json_decode($reply_txt);
+        if ($this->MYSQLI) {
+            $sql = "INSERT INTO `messages` (`msg_id`, `user_id`,`chat_id`,`text`) VALUE (" . $reply->result->message_id . ", 0, " . $reply->result->chat->id . ", '" . $reply->result->text . "');";
+            $result = $this->MYSQLI->query($sql);
+        }
+        return $reply_txt;
     }
 
 
