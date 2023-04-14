@@ -84,8 +84,8 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
             }
         }
 
-        $sql = "INSERT INTO `games` (`chat_id`,`status`,`score1`,`score2`,`active_team`,`team1`,`team2`,`dictionary_id`) VALUE(" . 
-        $tgBot->MSG_INFO['chat_id']  . ", 0, 0, 0, 0, '{\"players\":[]}',  '{\"players\":[]}', 1)";
+        $sql = "INSERT INTO `games` (`chat_id`, `status`, `score1`, `score2`, `active_team`, `team1`, `team2`, `team1_lead`, `team2_lead`, `dictionary_id`) VALUE(" . 
+        $tgBot->MSG_INFO['chat_id']  . ", 0, 0, 0, 0, '{\"players\":[]}', '{\"players\":[]}', 0, 0, 1)";
         $result = $mysqli->query($sql); 
 
         $text_return = "ожидаем сбора участников";
@@ -100,7 +100,18 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
                         'text' => 'Играть во 2ой команде',
                         'callback_data' => 'team2',
                     ),
+                ),
+                array(
+                    array(
+                        'text' => 'Первый раунд',
+                        'callback_data' => 'play',
+                    ),
+                    array(
+                        'text' => 'Сменить словарь',
+                        'callback_data' => 'dictionary',
+                    ),
                 )
+
             ),
         ));
     }
@@ -111,19 +122,23 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
 
 // этот кусок отлавливает нажатия кнопок под сообщением (если они были посланы)
 }elseif($tgBot->MSG_INFO['msg_type'] == 'callback') {   
-    $tgBot->debug($tgBot->MSG_INFO["text"]);
     // этот кусок отлавливает нажатия кнопок под сообщением (если они были посланы)
     // есть есть нажатие кнопок клавиатуры (под сообщением)
-    
-    if ($tgBot->MSG_INFO["text"] == 'team1' || $tgBot->MSG_INFO["text"] == 'team2') {
-        $sql = "SELECT `id`, `team1`, `team2` FROM `games` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
-        $result = $mysqli->query($sql); 
-        $row = $result->fetch_row();
-        $team1 = json_decode($row[1]);
-        $team2 = json_decode($row[2]);
-        $team1->players = array_unique($team1->players);
-        $team2->players = array_unique($team2->players);
-        
+
+    $sql = "SELECT `id`, `team1`, `team2`,`active_team`, `team1_lead`, `team2_lead` FROM `games` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
+    $result = $mysqli->query($sql); 
+    $row = $result->fetch_row();
+    $id = $row[0];
+    $team1 = json_decode($row[1]);
+    $team2 = json_decode($row[2]);
+    $team1->players = array_unique($team1->players);
+    $team2->players = array_unique($team2->players);
+    $active_team = $row[3];
+    $team1_lead = $row[4];
+    $team2_lead = $row[5];
+
+    // если были нажаты кнопки присоединться к команде
+    if ($tgBot->MSG_INFO["text"] == 'team1' || $tgBot->MSG_INFO["text"] == 'team2') {        
         while (($key = array_search($tgBot->MSG_INFO["user_id"], $team1->players)) !== FALSE) {
             array_splice($team1->players,$key,1);
         }
@@ -139,10 +154,59 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
             $team2->players[] = $tgBot->MSG_INFO["user_id"];
         }
 
-        $sql = "UPDATE `games` SET `team1` = '" . json_encode($team1) . "', `team2` = '" . json_encode($team2) . "' WHERE `id` = '" . $row[0] . "'";
+        $sql = "UPDATE `games` SET `team1` = '" . json_encode($team1) . "', `team2` = '" . json_encode($team2) . "' WHERE `id` = '" . $id . "'";
         $result = $mysqli->query($sql); 
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
     }
+    
+    // если была нажата кнопка выбора словаря
+    if ($tgBot->MSG_INFO["text"] == 'dictionary') {
+        $text_return = "Выбор словаря пока не доступен. Функция в разработке.";
+        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
+    }
+    // если была нажата кнопка начала раунда
+    //TODO remove btn присоединиться к команде
+    if ($tgBot->MSG_INFO["text"] == 'play') {
+        // меняем играющую команду
+        $active_team = ($active_team == 1) ? 2 : 1;
+        
+        // ищем следующего ведущего в играющей команде
+        if ($active_team == 1) {
+            $team = $team1;
+            $team_lead = $team1_lead;
+        }else{
+            $team = $team2;
+            $team_lead = $team2_lead;
+        }
+
+        $team_lead_key = array_search($team_lead, $team->players);
+        // если текущий ведущий не найден, ставим первого
+        if ($team_lead_key === FALSE) { 
+            $team_lead_key = 0;
+        }else{ // иначе сдвигаем на следующего
+            if (count($team->players) > $team_lead_key + 1) {
+                $team_lead_key++;
+            }else{
+                $team_lead_key = 0;
+            }
+        }
+        $team_lead = $team->players[$team_lead_key];
+
+
+        $sql = "UPDATE `games` SET `active_team` = " . $active_team . ", `team" . $active_team . "_lead` = " . $team_lead . " WHERE `id` = '" . $id . "'";
+        $result = $mysqli->query($sql); 
+
+        $sql = "SELECT `username`, `first_name`, `last_name` FROM `users` WHERE `tid` = " . $team_lead . ";";
+        $result = $mysqli->query($sql); 
+        $row = $result->fetch_row();
+        $team_lead_name = ($row[0] != "") ? $row[0] : $row[1] . " " . $row[2];
+
+        $text_return = "Объясняет " . $active_team . "я команда. Ведущий: " . $team_lead_name;
+        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
+
+        $text = "слово для объяснения:" . "ПОДУШКА";
+        $tgBot->msg_to_tg($team1->players[0], $text);
+    }    
 }
 
 ?>
