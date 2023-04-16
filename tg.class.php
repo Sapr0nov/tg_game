@@ -7,7 +7,7 @@ class TgBotClass
     public $DATA;
     public $MSG_INFO;
 
-    function __construct($token, $server='localhost', $pswd='', $user='', $db='', $table=''){
+    function __construct($token, $server='localhost', $user='', $pswd='', $db='', $table=''){
         $this->BOT_TOKEN = $token; 
         $this->TABLE = $table;
         if ($user !== '') {
@@ -118,13 +118,19 @@ class TgBotClass
         curl_setopt_array($ch, $ch_post);
         curl_exec($ch);
         curl_close($ch);
+
+        if ($this->MYSQLI) {
+            $sql = "DELETE FROM `messages` WHERE `msg_id` = " . $msg_id . ";";
+            $result = $this->MYSQLI->query($sql);
+        }
+
     }
 
 
     public function debug($output) {
         $SITE_DIR = dirname(__FILE__) . "/";
-        $file_message = file_get_contents($SITE_DIR . 'message.txt');
-        file_put_contents($SITE_DIR . 'message.txt',  $file_message . PHP_EOL . "output = " . $output);
+        $file_message = file_get_contents($SITE_DIR . 'debug.txt');
+        file_put_contents($SITE_DIR . 'debug.txt',  $file_message . PHP_EOL . "output = " . $output);
     }
 }
 ?>
