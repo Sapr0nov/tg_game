@@ -1,9 +1,8 @@
 <?php
 class AliasClass
 {
-    public $acitve_team;
-    public $word_list;
-    public $curr_word;
+    public $game;
+    public $gen_list;
     public $MYSQLI;
 
     function __construct($server='localhost', $user='', $pswd='', $db=''){
@@ -21,7 +20,7 @@ class AliasClass
         $sql = "SELECT `id` FROM `dictionaries_name` WHERE `dictionary_name` = '" . $dictionary . "';";
         $result = $this->MYSQLI->query($sql);
         if ($result->num_rows < 1) {
-            $this->word_list = [];
+            $this->gen_list = [];
             return [];
         }
         $row = $result->fetch_row();
@@ -34,8 +33,34 @@ class AliasClass
         while ($row = $result->fetch_row()) {
             $outArray[] = (object) array('word' => $row[0], 'description' => $row[1]);
         }
-        $this->word_list = $outArray;
+        $this->gen_list = $outArray;
         return json_encode($outArray);
     }
+
+    public function get_game($chat_id) {
+        $this->game = new stdClass();
+        
+        $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `word_number`, `word_list` FROM `games` WHERE `chat_id` = '" . $chat_id . "' OR `team1_lead` = '" . $chat_id . "' OR `team2_lead` = '" . $chat_id . "';";
+        $result = $this->MYSQLI->query($sql); 
+        if ($result->num_rows < 1) {
+            $this->game->error = "Не удалось получить информацию об игре";
+            return NULL;
+        }
+        $row = $result->fetch_row();
+        
+        $this->game->id = $row[0];
+        $this->game->team1 = json_decode($row[1]);
+        $this->game->team2 = json_decode($row[2]);
+        $this->game->team1->players = array_unique($this->game->team1->players);
+        $this->game->team2->players = array_unique($this->game->team2->players);
+        $this->game->active_team = $row[3];
+        $this->game->team1_lead = $row[4];
+        $this->game->team2_lead = $row[5];
+        $this->game->word_number = $row[6];
+        $this->game->word_list = json_decode($row[7]);
+    
+        return $game;
+    }
 }
+
 ?>
