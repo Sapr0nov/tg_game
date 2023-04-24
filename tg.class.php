@@ -123,7 +123,6 @@ class TgBotClass
             $sql = "DELETE FROM `messages` WHERE `msg_id` = " . $msg_id . ";";
             $result = $this->MYSQLI->query($sql);
         }
-
     }
 
 
@@ -131,6 +130,23 @@ class TgBotClass
         $SITE_DIR = dirname(__FILE__) . "/";
         $file_message = file_get_contents($SITE_DIR . 'debug.txt');
         file_put_contents($SITE_DIR . 'debug.txt',  $file_message . PHP_EOL . "output = " . $output);
+    }
+
+
+    public function keyboard($arr) {
+        return json_encode(array(
+            'keyboard' => $arr,
+            'resize_keyboard' => true, 
+            'one_time_keyboard' => true
+            )
+        );
+    }
+
+
+    public function inline_keyboard($arr) {
+        return json_encode(array(
+            'inline_keyboard' => $arr,
+        ));
     }
 }
 ?>

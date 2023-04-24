@@ -40,15 +40,16 @@ class AliasClass
     public function get_game($chat_id) {
         $this->game = new stdClass();
         
-        $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `word_number`, `word_list` FROM `games` WHERE `chat_id` = '" . $chat_id . "' OR `team1_lead` = '" . $chat_id . "' OR `team2_lead` = '" . $chat_id . "';";
+        $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `word_number`, `word_list`, `owner_id` FROM `games` WHERE `owner_id` = '" . $chat_id . "' OR `team1_lead` = '" . $chat_id . "' OR `team2_lead` = '" . $chat_id . "';";
         $result = $this->MYSQLI->query($sql); 
         if ($result->num_rows < 1) {
-            $this->game->error = "Не удалось получить информацию об игре";
+            $this->game->error = "Не удалось получить информацию об игре (sql)" . $sql;
             return NULL;
         }
         $row = $result->fetch_row();
         
         $this->game->id = $row[0];
+        $this->game->owner = $row[8];
         $this->game->team1 = json_decode($row[1]);
         $this->game->team2 = json_decode($row[2]);
         $this->game->team1->players = array_unique($this->game->team1->players);
