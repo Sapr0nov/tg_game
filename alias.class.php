@@ -43,7 +43,7 @@ class AliasClass
         $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `word_number`, `word_list`, `owner_id` FROM `games` WHERE `owner_id` = '" . $chat_id . "' OR `team1_lead` = '" . $chat_id . "' OR `team2_lead` = '" . $chat_id . "';";
         $result = $this->MYSQLI->query($sql); 
         if ($result->num_rows < 1) {
-            $this->game->error = "Не удалось получить информацию об игре (sql)" . $sql;
+            $this->game->error = "game not found" . $sql;
             return NULL;
         }
         $row = $result->fetch_row();

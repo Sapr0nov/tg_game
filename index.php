@@ -5,11 +5,10 @@
 **/
 
 header('Content-Type: text/html; charset=utf-8'); // Выставляем кодировку UTF-8
-$error = "";
-
 
 $SITE_DIR = dirname(__FILE__) . "/";
 require_once($SITE_DIR . 'env.php'); 
+require_once($SITE_DIR . 'i18n.php'); 
 require_once($SITE_DIR . 'tg.class.php');
 require_once($SITE_DIR . 'alias.class.php');
 
@@ -42,7 +41,7 @@ $new_user_id = $row[0];
 
 // выводим отписку для группы и прекращаем скрипт
 if ($tgBot->MSG_INFO["type"] != "private" && $tgBot->MSG_INFO["type"] !== null) {
-    $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], "Я не работаю в группах - напиши мне лично");
+    $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $ERROR["onlyPrivate"]);
     return;
 }
 
@@ -53,10 +52,10 @@ if ($new_user_id > 0) {
 
 
 if ($tgBot->MSG_INFO['msg_type'] == 'message') {
-    $reply_markup_start = $tgBot->keyboard([["Начать игру", "Настройки"],["Статистика", "Правила", "Очистить чат"]]);
-    $reply_markup_room = $tgBot->keyboard([["Мои комнаты", "Создать комнату"],["Присоединиться"]]);
+    $reply_markup_start = $tgBot->keyboard([[$BTNS['startGame'], $BTNS['settings']],[$BTNS['stats'], $BTNS['rules'], $BTNS['clear']]]);
+    $reply_markup_room = $tgBot->keyboard([[$BTNS['rooms'], $BTNS['createRoom']],[$BTNS['join']]]);
 
-    if ($tgBot->MSG_INFO["text"] == 'Очистить чат') {
+    if ($tgBot->MSG_INFO["text"] == $BTNS['clear']) {
         $sql = "SELECT `msg_id` FROM `messages` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
         $result = $mysqli->query($sql); 
         while ($row = $result->fetch_row()) {
@@ -65,44 +64,43 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         $sql = "DELETE FROM `messages` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
         $result = $mysqli->query($sql); 
 
-        $text_return = "выберите дейстие:";
+        $text_return = $RETURNTXT['selectAction'];
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup_start);
-    
         return; 
     }    
-    if ($tgBot->MSG_INFO["text"] == 'Правила') {
-        $text_return = "Игра для 4х и более человек. Игроки делаятся на две команды и пытаются объяснить друг другу слова. Следуйте подсказкам на экране";
+    if ($tgBot->MSG_INFO["text"] == $BTNS['rules']) {
+        $text_return = $RETURNTXT['rules'];
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup_start);
         return;
     }
-    if ($tgBot->MSG_INFO["text"] == 'Настройки') {
-        $text_return = "В разработке";
+    if ($tgBot->MSG_INFO["text"] == $BTNS['settings']) {
+        $text_return = $RETURNTXT['developing'];
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup_start);
         return;
     }
-    if ($tgBot->MSG_INFO["text"] == 'Статистика') {
-        $text_return = "Появится в следующих выпусках";
+    if ($tgBot->MSG_INFO["text"] == $BTNS['stats']) {
+        $text_return = $RETURNTXT['developing'];
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup_start);
         return;
     }
 
-    if ($tgBot->MSG_INFO["text"] == 'Присоединиться') {
-        $reply_markup = $tgBot->keyboard([["Войти", "Назад"]]);
-        $text_return = "Введите номер комнаты:";
+    if ($tgBot->MSG_INFO["text"] ==  $BTNS['join']) {
+        $reply_markup = $tgBot->keyboard([[$BTNS['enter'], $BTNS['back']]]);
+        $text_return = $RETURNTXT['enter_room'];
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup);
         return;
     }
 
-    if ($tgBot->MSG_INFO["text"] == 'Создать комнату') {
-        $reply_markup = $tgBot->keyboard([["Войти", "Удалить"]]);
-        $text_return = "Создана комната № " . 1231;
+    if ($tgBot->MSG_INFO["text"] == $BTNS['createRoom']) {
+        $reply_markup = $tgBot->keyboard([[$BTNS['enter'], $BTNS['delete']]]);
+        $text_return = $BTNS['roomCreated'] . 1231;
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup);
         return;
     }
 
     
-    if ($tgBot->MSG_INFO["text"] == 'Начать игру') {
-        $sql = "SELECT `id` FROM `games` WHERE `chat_id` = ". $tgBot->MSG_INFO['chat_id'] . "";
+    if ($tgBot->MSG_INFO["text"] == $BTNS['startGame']) {
+        $sql = "SELECT `id` FROM `games` WHERE `owner_id` = ". $tgBot->MSG_INFO['chat_id'] . "";
         $result = $mysqli->query($sql);
         if ($result->num_rows>0) {
             while ($row = $result->fetch_row()) {
@@ -112,20 +110,23 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         }
         
         $gameAlias->create_word_list('basic',20);        
-        
-        $sql = "INSERT INTO `games` (`chat_id`, `word_number`, `score1`, `score2`, `active_team`, `team1`, `team2`, `team1_lead`, `team2_lead`, `dictionary_id`, `word_list`) VALUE(" . 
-        $tgBot->MSG_INFO['chat_id']  . ", 0, 0, 0, 0, '{\"players\":[]}', '{\"players\":[]}', 0, 0, 1, '" . json_encode($gameAlias->gen_list, JSON_UNESCAPED_UNICODE) . "')";
+        $pswd = rand(10000, 99999);
+        $sql = "INSERT INTO `games` (`owner_id`, `password`, `word_number`, `score1`, `score2`, `active_team`, `team1`, `team2`, `team1_lead`, `team2_lead`, `dictionary_id`, `word_list`) VALUE(" . 
+        $tgBot->MSG_INFO['chat_id'] . ", " . $pswd . ", 0, 0, 0, 0, '{\"players\":[]}', '{\"players\":[]}', 0, 0, 1, '" . json_encode($gameAlias->gen_list, JSON_UNESCAPED_UNICODE) . "')";
         $result = $mysqli->query($sql); 
+        $sqlID = "SELECT LAST_INSERT_ID();";
+        $resultID = $mysqli->query($sqlID); 
+        $row = $resultID->fetch_row();        
+        $room = $row[0];
 
-        $text_return = "начать игру:"; //TODO
+        $text_return = $BTNS['startGame'] . ". " . $RETURNTXT['roomCreated'] . $room . " " . $RETURNTXT['roomPswd'] . $pswd; 
         $reply_markup = $tgBot->inline_keyboard([
-            [   ['text' => 'Играть в 1ой команде', 'callback_data' => 'team1'],
-                ['text' => 'Играть во 2ой команде', 'callback_data' => 'team2']],
-            [   ['text' => 'Первый раунд', 'callback_data' => 'play'],
-                ['text' => 'Сменить словарь', 'callback_data' => 'dictionary']]
+            [   ['text' => $BTNS['team1'], 'callback_data' => 'team1'],
+                ['text' => $BTNS['team2'], 'callback_data' => 'team2']],
+            [   ['text' => $BTNS['round'], 'callback_data' => 'play'],
+                ['text' => $BTNS['changeDict'], 'callback_data' => 'dictionary']]
         ]);
-         
-        
+
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup);
         $tgBot->delete_msg_tg($tgBot->MSG_INFO["chat_id"], $tgBot->MSG_INFO["message_id"]);
         return;
@@ -147,39 +148,15 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         return;
     }
     // Кнопки под сообщения (отгадали / пропустить / определение)
-    $reply_markup =  json_encode(array(
-        'inline_keyboard' => array(
-            array(
-                array(
-                    'text' => 'Угадали',
-                    'callback_data' => 'win',
-                ),
-                array(
-                    'text' => 'Пропустить',
-                    'callback_data' => 'lose',
-                ),
-                array(
-                    'text' => 'Значение',
-                    'callback_data' => 'description',
-                ),
-            ),
-        ),
-    ));
-    $reply_markup_without_desc =  json_encode(array(
-        'inline_keyboard' => array(
-            array(
-                array(
-                    'text' => 'Угадали',
-                    'callback_data' => 'win',
-                ),
-                array(
-                    'text' => 'Пропустить',
-                    'callback_data' => 'lose',
-                ),
-            ),
-        ),
-    ));
+    $reply_markup = $tgBot->inline_keyboard([[
+        array('text' => $BTNS['guessed'], 'callback_data' => 'win',),
+        array('text' => $BTNS['skip'], 'callback_data' => 'lose',),
+        array('text' => $BTNS['desc'], 'callback_data' => 'description',),
+    ],]);
 
+    $reply_markup_without_desc = $tgBot->inline_keyboard([[
+            array('text' => $BTNS['guessed'], 'callback_data' => 'win',),
+            array('text' => $BTNS['skip'], 'callback_data' => 'lose',),],]);
 
     // если были нажаты кнопки присоединться к команде >|
     if ($tgBot->MSG_INFO["text"] == 'team1' || $tgBot->MSG_INFO["text"] == 'team2') {
@@ -191,10 +168,10 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         }
 
         if ($tgBot->MSG_INFO["text"] == 'team1') {
-            $text_return = $tgBot->MSG_INFO['name'] . " присоединился к первой команде.";
+            $text_return = $tgBot->MSG_INFO['name'] . " " . $RETURNTXT['joined1'];
             $gameAlias->game->team1->players[] = $tgBot->MSG_INFO["user_id"];
         }else{
-            $text_return = $tgBot->MSG_INFO['name'] . " присоединился ко второй команде.";
+            $text_return = $tgBot->MSG_INFO['name'] . " " . $RETURNTXT['joined2'];
             $gameAlias->game->team2->players[] = $tgBot->MSG_INFO["user_id"];
         }
 
@@ -206,7 +183,7 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
     
     // если была нажата кнопка выбора словаря >|
     if ($tgBot->MSG_INFO["text"] == 'dictionary') {
-        $text_return = "Выбор словаря пока не доступен. Функция в разработке.";
+        $text_return = $RETURNTXT['developing'];
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
         return;
     }
@@ -224,28 +201,39 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
     if ($tgBot->MSG_INFO["text"] == 'play') {
         // меняем играющую команду
         $gameAlias->game->active_team = ($gameAlias->game->active_team == 1) ? 2 : 1;
-
+        
         // ищем следующего ведущего в играющей команде
         if ($gameAlias->game->active_team == 1) {
-            $team = $gameAlias->game->team1;
+            $team = $gameAlias->game->team1->players;
             $team_lead = $gameAlias->game->team1_lead;
         }else{
-            $team = $gameAlias->game->team2;
+            $team = $gameAlias->game->team2->players;
             $team_lead = $gameAlias->game->team2_lead;
         }
 
-        $team_lead_key = array_search($team_lead, $team->players);
+/*
+        if (count($team) < 2) {
+            $text_err = $ERROR["noteam"];
+            $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_err);
+            return;
+        }
+*/
+        if ($team_lead == 0) {
+            $yeam_lead = $team[0];
+        }
+
+        $team_lead_key = array_search($team_lead, $team);
         // если текущий ведущий не найден, ставим первого
         if ($team_lead_key === FALSE) { 
             $team_lead_key = 0;
         }else{ // иначе сдвигаем на следующего
-            if (count($team->players) > $team_lead_key + 1) {
+            if (count($team) > $team_lead_key + 1) {
                 $team_lead_key++;
             }else{
                 $team_lead_key = 0;
             }
         }
-        $team_lead = $team->players[$team_lead_key];
+        $team_lead = $team[$team_lead_key];
 
         $sql = "UPDATE `games` SET `active_team` = " . $gameAlias->game->active_team . ", `team" . $gameAlias->game->active_team . "_lead` = " . $team_lead . " WHERE `id` = '" . $gameAlias->game->id . "'";
         $result = $mysqli->query($sql); 
@@ -255,11 +243,10 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         $row = $result->fetch_row();
         $team_lead_name = ($row[0] != "") ? $row[0] : $row[1] . " " . $row[2];
 
-
-        $text_return = "Объясняет " . $gameAlias->game->active_team . "я команда. Ведущий: " . $team_lead_name;
-        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return . $team_lead);
+        $text_return = $RETURNTXT['explains'] . " " . $gameAlias->game->active_team . $RETURNTXT['explains2'] . " " . $team_lead_name;
+        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
         // и задаем сообщение для личного чата ведущего
-        $text_return = "слово для объяснения: " . $gameAlias->game->word_list[$gameAlias->game->word_number]->word;
+        $text_return = $RETURNTXT['word'] . " " . $gameAlias->game->word_list[$gameAlias->game->word_number]->word;
 
         if (strlen($gameAlias->game->word_list[$gameAlias->game->word_number]->description) > 0) {
             $tgBot->msg_to_tg($team_lead, $text_return, $reply_markup);
@@ -274,13 +261,13 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
     // если была нажата кнопка Угадали
     if ($tgBot->MSG_INFO["text"] == 'win') {
         $gameAlias->game->word_number++;
-        $text_return = "Следующее слово: " . $gameAlias->game->word_list[$gameAlias->game->word_number]->word;
+        $text_return = $RETURNTXT['nextWord'] . " " . $gameAlias->game->word_list[$gameAlias->game->word_number]->word;
     }
 
     // если была нажата кнопка Пропустить
     if ($tgBot->MSG_INFO["text"] == 'lose') {
         $gameAlias->game->word_number++;
-        $text_return = "Слово на замену: " . $gameAlias->game->word_list[$gameAlias->game->word_number]->word;
+        $text_return = $RETURNTXT['changeWord'] . " " . $gameAlias->game->word_list[$gameAlias->game->word_number]->word;
     }
 
     $team_lead = ($gameAlias->game->active_team == 2) ? $gameAlias->game->team2_lead : $gameAlias->game->team1_lead;
@@ -293,7 +280,6 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
     }else{
         $tgBot->msg_to_tg($team_lead, $text_return, $reply_markup_without_desc);
     }
-
 }
 
 ?>
