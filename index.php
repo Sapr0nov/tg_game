@@ -50,11 +50,30 @@ if ($new_user_id > 0) {
     $result = $mysqli->query($sql);    
 }
 
+// получаем статус пользователя
+$sql = "SELECT `status`, `game_id` FROM `users` WHERE `tid` = ". $tgBot->MSG_INFO['chat_id'] . "";
+$result = $mysqli->query($sql);
+$row = $result->fetch_row();
+$status = $row[0];
+$room = $row[1];
 
 if ($tgBot->MSG_INFO['msg_type'] == 'message') {
-    $reply_markup_start = $tgBot->keyboard([[$BTNS['startGame'], $BTNS['settings']],[$BTNS['stats'], $BTNS['rules'], $BTNS['clear']]]);
-    $reply_markup_room = $tgBot->keyboard([[$BTNS['rooms'], $BTNS['createRoom']],[$BTNS['join']]]);
+    $reply_markup_start = $tgBot->keyboard([[$BTNS['startGame'], $BTNS['join']],[$BTNS['settings'], $BTNS['rules'], $BTNS['clear']]]);
 
+    // like clear 
+    if ($tgBot->MSG_INFO["text"] == $BTNS['back']) {
+        $sql = "SELECT `msg_id` FROM `messages` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
+        $result = $mysqli->query($sql); 
+        while ($row = $result->fetch_row()) {
+            $tgBot->delete_msg_tg($tgBot->MSG_INFO["chat_id"], $row[0]);
+        }
+        $sql = "DELETE FROM `messages` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
+        $result = $mysqli->query($sql); 
+
+        $text_return = $RETURNTXT['selectAction'];
+        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup_start);
+        return; 
+    }
     if ($tgBot->MSG_INFO["text"] == $BTNS['clear']) {
         $sql = "SELECT `msg_id` FROM `messages` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
         $result = $mysqli->query($sql); 
@@ -78,27 +97,7 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup_start);
         return;
     }
-    if ($tgBot->MSG_INFO["text"] == $BTNS['stats']) {
-        $text_return = $RETURNTXT['developing'];
-        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup_start);
-        return;
-    }
 
-    if ($tgBot->MSG_INFO["text"] ==  $BTNS['join']) {
-        $reply_markup = $tgBot->keyboard([[$BTNS['enter'], $BTNS['back']]]);
-        $text_return = $RETURNTXT['enter_room'];
-        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup);
-        return;
-    }
-
-    if ($tgBot->MSG_INFO["text"] == $BTNS['createRoom']) {
-        $reply_markup = $tgBot->keyboard([[$BTNS['enter'], $BTNS['delete']]]);
-        $text_return = $BTNS['roomCreated'] . 1231;
-        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup);
-        return;
-    }
-
-    
     if ($tgBot->MSG_INFO["text"] == $BTNS['startGame']) {
         $sql = "SELECT `id` FROM `games` WHERE `owner_id` = ". $tgBot->MSG_INFO['chat_id'] . "";
         $result = $mysqli->query($sql);
@@ -119,6 +118,9 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         $row = $resultID->fetch_row();        
         $room = $row[0];
 
+        $sql = "UPDATE `users` SET `status` = 1, `game_id` = $room  WHERE `tid` = ". $tgBot->MSG_INFO['chat_id'] . "";
+        $result = $mysqli->query($sql);
+
         $text_return = $BTNS['startGame'] . ". " . $RETURNTXT['roomCreated'] . $room . " " . $RETURNTXT['roomPswd'] . $pswd; 
         $reply_markup = $tgBot->inline_keyboard([
             [   ['text' => $BTNS['team1'], 'callback_data' => 'team1'],
@@ -132,6 +134,56 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         return;
     }
 
+    // присоединиться к игре
+    if ($tgBot->MSG_INFO["text"] ==  $BTNS['join']) {
+        $reply_markup = $tgBot->keyboard([[ $BTNS['back'] ]]);
+        $text_return = $RETURNTXT['enter_room'];
+        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup);
+        $sql = "UPDATE `users` SET `status` = 4 WHERE `tid` = ". $tgBot->MSG_INFO['chat_id'] . "";
+        $result = $mysqli->query($sql);
+        return;
+    }
+    // если попытка войти в комнату проверяем номер
+    if ($status == 4) {
+        $room = $tgBot->MSG_INFO["text"];
+        $sql = "SELECT `password` FROM `games` WHERE `id` = " . intval($room) . ";";
+        $result = $mysqli->query($sql);
+        if ($result->num_rows>0) {
+            $text_return = "Комната №" . $tgBot->MSG_INFO["text"] . " введите пароль:";
+            $sql = "UPDATE `users` SET `game_id` = " . $room . ", `status` = 3 WHERE `tid` = ". $tgBot->MSG_INFO['chat_id'] . "";
+            $result = $mysqli->query($sql);
+        }else{
+            $text_return = $tgBot->MSG_INFO["text"] . ": комната не найдена";
+        }
+        $reply_markup = $tgBot->keyboard([[ $BTNS['back'] ]]);
+        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup);
+        $tgBot->delete_msg_tg($tgBot->MSG_INFO["chat_id"], $tgBot->MSG_INFO["message_id"]);
+        return;
+    }
+    // если попытка войти в комнату проверяем номер
+    if ($status == 3) {
+        $pswd = $tgBot->MSG_INFO["text"];
+        $sql = "SELECT `id` FROM `games` WHERE `id` = " . intval($room) . " AND `password` = " . $pswd . ";";
+        $result = $mysqli->query($sql);
+        if ($result->num_rows>0) {
+            $text_return = "Вы вошли в комнату №" . $tgBot->MSG_INFO["text"];
+            $sql = "UPDATE `users` SET `game_id` = " . $room . ",`status` = 2 WHERE `tid` = ". $tgBot->MSG_INFO['chat_id'] . "";
+            $result = $mysqli->query($sql);
+            $reply_markup = $tgBot->inline_keyboard([
+                [   ['text' => $BTNS['team1'], 'callback_data' => 'team1'],
+                    ['text' => $BTNS['team2'], 'callback_data' => 'team2']],
+                [   ['text' => $BTNS['back'], 'callback_data' => 'back']]
+            ]);
+    
+        }else{
+            $text_return = $tgBot->MSG_INFO["text"] . ": пароль не правильный";
+        }
+        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup);
+        $tgBot->delete_msg_tg($tgBot->MSG_INFO["chat_id"], $tgBot->MSG_INFO["message_id"]);
+        return;
+
+    }
+
     // любое другое сообщение удаляем и предлагаем сделать выбор
     $text_return = "выберите дейстие:";
     $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup_start);
@@ -141,7 +193,7 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
 // этот кусок отлавливает нажатия кнопок под сообщением (если они были посланы)
 }elseif($tgBot->MSG_INFO['msg_type'] == 'callback') {   
     //  получение переменных из базы
-    $gameAlias->get_game($tgBot->MSG_INFO["chat_id"]);
+    $gameAlias->get_game($room);
     if ($gameAlias->game->error) {
         $text_return = $tgBot->MSG_INFO["text"] . "Ошибка:" . $gameAlias->game->error;
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
@@ -160,11 +212,12 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
 
     // если были нажаты кнопки присоединться к команде >|
     if ($tgBot->MSG_INFO["text"] == 'team1' || $tgBot->MSG_INFO["text"] == 'team2') {
+        // если игрок уже в команде - находим и удаляем его
         while (($key = array_search($tgBot->MSG_INFO["user_id"], $gameAlias->game->team1->players)) !== FALSE) {
-            array_splice($gameAlias->game->team1->players,$key, 1);
+            array_splice($gameAlias->game->team1->players, $key, 1);
         }
         while (($key = array_search($tgBot->MSG_INFO["user_id"], $gameAlias->game->team2->players)) !== FALSE) {
-            array_splice($gameAlias->game->team2->players,$key, 1);
+            array_splice($gameAlias->game->team2->players, $key, 1);
         }
 
         if ($tgBot->MSG_INFO["text"] == 'team1') {
@@ -175,9 +228,14 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
             $gameAlias->game->team2->players[] = $tgBot->MSG_INFO["user_id"];
         }
 
+        $gameAlias->game->players = array_merge($gameAlias->game->team1->players, $gameAlias->game->team2->players);
         $sql = "UPDATE `games` SET `team1` = '" . json_encode($gameAlias->game->team1, JSON_UNESCAPED_UNICODE) . "', `team2` = '" . json_encode($gameAlias->game->team2, JSON_UNESCAPED_UNICODE) . "' WHERE `id` = '" . $gameAlias->game->id . "'";
         $result = $mysqli->query($sql); 
-        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
+        // пишем всем в чат сообщение
+        foreach($gameAlias->game->players as $player) {
+            $tgBot->msg_to_tg($player, $text_return);
+        }
+
         return;
     }
     
@@ -196,7 +254,6 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
     }
 
     // если была нажата кнопка начала раунда
-    //TODO remove btn присоединиться к команде
     // Блоки win и lose имеют общий вывод в конце
     if ($tgBot->MSG_INFO["text"] == 'play') {
         // меняем играющую команду

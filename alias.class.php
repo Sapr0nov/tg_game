@@ -37,10 +37,11 @@ class AliasClass
         return json_encode($outArray);
     }
 
-    public function get_game($chat_id) {
+    public function get_game($id) {
         $this->game = new stdClass();
-        
-        $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `word_number`, `word_list`, `owner_id` FROM `games` WHERE `owner_id` = '" . $chat_id . "' OR `team1_lead` = '" . $chat_id . "' OR `team2_lead` = '" . $chat_id . "';";
+// вариант для поиска по участнику
+//        $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `word_number`, `word_list`, `owner_id` FROM `games` WHERE `owner_id` = '" . $chat_id . "' OR `team1_lead` = '" . $chat_id . "' OR `team2_lead` = '" . $chat_id . "';";
+        $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `word_number`, `word_list`, `owner_id` FROM `games` WHERE `id` = " . $id . ";";
         $result = $this->MYSQLI->query($sql); 
         if ($result->num_rows < 1) {
             $this->game->error = "game not found" . $sql;
@@ -54,6 +55,7 @@ class AliasClass
         $this->game->team2 = json_decode($row[2]);
         $this->game->team1->players = array_unique($this->game->team1->players);
         $this->game->team2->players = array_unique($this->game->team2->players);
+        $this->game->players = array_merge($this->game->team1->players, $this->game->team2->players);
         $this->game->active_team = $row[3];
         $this->game->team1_lead = $row[4];
         $this->game->team2_lead = $row[5];
