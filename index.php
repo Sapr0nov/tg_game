@@ -12,6 +12,7 @@ require_once($SITE_DIR . 'i18n.php');
 require_once($SITE_DIR . 'tg.class.php');
 require_once($SITE_DIR . 'alias.class.php');
 
+$dict_name = 'basic';
 $tgBot = new TgBotClass($BOT_TOKEN, $SQL_SERVER, $SQL_USER, $SQL_PSWD, $SQL_DB, $TABLE);
 $gameAlias = new AliasClass($SQL_SERVER, $SQL_USER, $SQL_PSWD, $SQL_DB);
 $mysqli = $tgBot->MYSQLI;
@@ -20,7 +21,6 @@ $dataInput = file_get_contents('php://input'); // весь ввод перена
 $data = json_decode($dataInput, true); // декодируем json-закодированные-текстовые данные в PHP-массив
 $tgBot->get_data($dataInput);
 
-$tgBot->debug(json_encode($tgBot->MSG_INFO));
 // если указан пользователь проверяем его наличие в базе
 if ($tgBot->MSG_INFO["user_id"] != 0) {
     $sql = "SELECT `id` FROM `users` WHERE `tid` = '" . $tgBot->MSG_INFO["user_id"] . "';";
@@ -38,7 +38,6 @@ if ($tgBot->MSG_INFO["user_id"] != 0) {
 // получаем данные или для SELECT или для LAST INSERT
 $row = $result->fetch_row();
 $new_user_id = $row[0];
-
 // выводим отписку для группы и прекращаем скрипт
 if ($tgBot->MSG_INFO["type"] != "private" && $tgBot->MSG_INFO["type"] !== null) {
     $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $ERROR["onlyPrivate"]);
@@ -108,7 +107,7 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
             }
         }
         
-        $gameAlias->create_word_list('basic',20);        
+        $gameAlias->create_word_list($dict_name, 20);        
         $pswd = rand(10000, 99999);
         $sql = "INSERT INTO `games` (`owner_id`, `password`, `word_number`, `score1`, `score2`, `active_team`, `team1`, `team2`, `team1_lead`, `team2_lead`, `dictionary_id`, `word_list`) VALUE(" . 
         $tgBot->MSG_INFO['chat_id'] . ", " . $pswd . ", 0, 0, 0, 0, '{\"players\":[]}', '{\"players\":[]}', 0, 0, 1, '" . json_encode($gameAlias->gen_list, JSON_UNESCAPED_UNICODE) . "')";
@@ -195,7 +194,7 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
     //  получение переменных из базы
     $gameAlias->get_game($room);
     if ($gameAlias->game->error) {
-        $text_return = $tgBot->MSG_INFO["text"] . "Ошибка:" . $gameAlias->game->error;
+        $text_return = " Ошибка:" . $gameAlias->game->error;
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
         return;
     }
@@ -300,15 +299,24 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         $row = $result->fetch_row();
         $team_lead_name = ($row[0] != "") ? $row[0] : $row[1] . " " . $row[2];
 
-        $text_return = $RETURNTXT['explains'] . " " . $gameAlias->game->active_team . $RETURNTXT['explains2'] . " " . $team_lead_name;
+        $text_return = $RETURNTXT['explains'] . " " . $gameAlias->game->active_team . $RETURNTXT['explains2'];
         $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return);
         // и задаем сообщение для личного чата ведущего
-        $text_return = $RETURNTXT['word'] . " " . $gameAlias->game->word_list[$gameAlias->game->word_number]->word;
+        $text_return = $RETURNTXT['word'] . " " . $gameAlias->game->word_list[$gameAlias->game->word_number]->word . " " . strlen($gameAlias->game->word_list[$gameAlias->game->word_number]->description);
 
         if (strlen($gameAlias->game->word_list[$gameAlias->game->word_number]->description) > 0) {
             $tgBot->msg_to_tg($team_lead, $text_return, $reply_markup);
         }else{
-            $tgBot->msg_to_tg($team_lead, $text_return, $reply_markup_without_desc);
+            $description = $gameAlias->get_description($gameAlias->game->word_list[$gameAlias->game->word_number]->word);
+            $gameAlias->game->word_list[$gameAlias->game->word_number]->description = $description;
+            $gameAlias->save_game();
+            $gameAlias->save_word_description($dict_name, $gameAlias->game->word_list[$gameAlias->game->word_number]->word, $description); 
+
+            if (strlen($description) > 0) {
+                $tgBot->msg_to_tg($team_lead, $text_return, $reply_markup);
+            }else{
+                $tgBot->msg_to_tg($team_lead, $text_return, $reply_markup_without_desc);
+            }
         }
     
         return;
@@ -331,7 +339,7 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
 
     $sql = "UPDATE `games` SET `word_number` = " . $gameAlias->game->word_number . " WHERE `id` = '" . $gameAlias->game->id . "';";
     $result = $mysqli->query($sql);
-    
+
     if (strlen($gameAlias->game->word_list[$gameAlias->game->word_number]->description) > 0) {
         $tgBot->msg_to_tg($team_lead, $text_return, $reply_markup);
     }else{
