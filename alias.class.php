@@ -113,7 +113,7 @@ class AliasClass
         foreach ($results[1] as $key => $res) {
             $res = preg_replace('~(<sup.*?</sup>)~usi', "", $res);
             $res = preg_replace('~(<span class=\"example-block\".*</span>)~usi', "", $res);
-            $out .= ($key+1) . " " . strip_tags($res) . "\r\n";
+            $out .= ($key+1) . " " . strip_tags($res) . " ";
         }
         $out = trim(str_replace("&#9670;", "", $out));
         if (strlen($out) > 10) {
@@ -135,7 +135,7 @@ class AliasClass
           $out = "";
           foreach ($results as $key => $res) {
             if ($key > 0) {
-                $out .= ($key) . " " . strip_tags($res) . "\r\n";
+                $out .= ($key) . " " . strip_tags($res) . " ";
             }
           }
           if (strlen($out) > 10) {

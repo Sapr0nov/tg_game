@@ -21,7 +21,9 @@ if ($LANG == 'ru') {
     $BTNS['team2'] = "Играть во 2ой команде";
     $BTNS['round'] = "Начать раунд";
     $BTNS['changeDict'] = "Сменить словарь";
-
+    $BTNS['end_game'] = "Завершить игру"; 
+    $BTNS['next_round'] = "Следующий раунд";
+    
     $BTNS['guessed'] = 'Угадали';
     $BTNS['skip'] = 'Пропустить';
     $BTNS['desc'] = "Значение";
@@ -39,6 +41,8 @@ if ($LANG == 'ru') {
     $RETURNTXT['word'] = "слово для объяснения:";
     $RETURNTXT['nextWord'] = "Следующее слово:";
     $RETURNTXT['changeWord'] = "Слово на замену:";
+    $RETURNTXT['word_limit'] = "Вы перебрали все отведенные вам слова";
+
 }
 
 if ($LANG == 'en') {
@@ -62,6 +66,8 @@ if ($LANG == 'en') {
     $BTNS['team2'] = "Play in 2nd team";
     $BTNS['round'] = "Start round";
     $BTNS['changeDict'] = "change Dictionary";
+    $BTNS['end_game'] = "Finish game"; 
+    $BTNS['next_round'] = "Next round";
 
     $BTNS['guessed'] = 'Guessed';
     $BTNS['skip'] = 'Skip';
@@ -79,6 +85,9 @@ if ($LANG == 'en') {
     $RETURNTXT['explains2'] = "team. Leader:";
     $RETURNTXT['word'] = "Word for explanation:";
     $RETURNTXT['nextWord'] = "Next word";
+    $RETURNTXT['changeWord'] = "Another word:";
+    $RETURNTXT['word_limit'] = "Ok, word list is out.";
+
 }
 
 ?>
