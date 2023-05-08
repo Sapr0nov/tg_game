@@ -6,6 +6,12 @@ $user_id = $_POST['user_id']; // telegram id user
 $language = isset($_POST['language']) ? $_POST['language'] : "ru"; // язык словаря
 
 if ($json == '') {
+    echo "<form action=\"\" method=\"post\">JSON словарь:<textarea name=\"json\"></textarea>";
+    echo "Название словаря<input name=\"name\" type=\"text\" />";
+    echo "telegram user id <input type=\"text\" name=\"user_id\" value=\"242159096\" />";
+    echo "Язык словаря <input type=\"text\" name=\"language\" value=\"ru\" />";
+    echo "<input type=\"submit\" value=\"Load\" />";
+    echo "</form>";
     return;
 }
 
@@ -26,8 +32,8 @@ $did = $row[0];
 
 $dictionary = json_decode($json);
 foreach ($dictionary->words as $word) {
-    $did = 1;
     $sql = "INSERT INTO `dictionaries` (`word`, `dictionary_id`, `description`)  VALUES ('" . $word . "'," . $did . ",'');";
     $result = $mysqli->query($sql);
 }
+echo "Словарь загружен";
 ?>

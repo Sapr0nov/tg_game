@@ -16,15 +16,7 @@ class AliasClass
 
 
     // получаем нужное количество слов для раунда из словаря
-    public function create_word_list($dictionary, $limit) {
-        $sql = "SELECT `id` FROM `dictionaries_name` WHERE `dictionary_name` = '" . $dictionary . "';";
-        $result = $this->MYSQLI->query($sql);
-        if ($result->num_rows < 1) {
-            $this->gen_list = [];
-            return [];
-        }
-        $row = $result->fetch_row();
-        $did = $row[0];
+    public function create_word_list($did, $limit) {
 
         $outArray = [];
         $sql = "SELECT `word`, `description` FROM `dictionaries` WHERE `dictionary_id` = " . $did . " ORDER BY RAND() LIMIT " . $limit . ";";
@@ -39,7 +31,7 @@ class AliasClass
 
     public function get_game($id) {
         $this->game = new stdClass();
-        $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `word_number`, `word_list`, `owner_id` FROM `games` WHERE `id` = " . $id . ";";
+        $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `score1`, `score2`, `word_number`, `word_list`, `owner_id`, `dictionary_id`, `language`, `round_time`, `mode`, `start_round_at` FROM `games` WHERE `id` = " . $id . ";";
         $result = $this->MYSQLI->query($sql); 
         if ($result->num_rows < 1) {
             $this->game->error = "game not found" . $sql;
@@ -48,7 +40,12 @@ class AliasClass
         $row = $result->fetch_row();
         
         $this->game->id = $row[0];
-        $this->game->owner = $row[8];
+        $this->game->owner = $row[10];
+        $this->game->dictionary_id = $row[11];
+        $this->game->language = $row[12];
+        $this->game->round_time = $row[13];
+        $this->game->mode = $row[14];
+        $this->game->start_round_at = $row[15];
         $this->game->team1 = json_decode($row[1]);
         $this->game->team2 = json_decode($row[2]);
         $this->game->team1->players = array_unique($this->game->team1->players);
@@ -57,37 +54,42 @@ class AliasClass
         $this->game->active_team = $row[3];
         $this->game->team1_lead = $row[4];
         $this->game->team2_lead = $row[5];
-        $this->game->word_number = $row[6];
-        $this->game->word_list = json_decode($row[7]);
+        $this->game->score1 = $row[6];
+        $this->game->score2 = $row[7];
+        $this->game->word_number = $row[8];
+        $this->game->word_list = json_decode($row[9]);
     
         return $game;
     }
     public function save_game() {
+        if ($this->game->start_round_at == '') {
+            $start_round_at = 'NULL';
+        }else{
+            $start_round_at = "'" . $this->game->start_round_at . "'";
+        }
         $sql = "UPDATE `games` SET " .
          "`team1` = '" . json_encode($this->game->team1) .
          "', `team2` = '" . json_encode($this->game->team2) .
          "', `active_team` = '" . $this->game->active_team .
          "', `team1_lead` = '" . $this->game->team1_lead .
          "', `team2_lead` = '" . $this->game->team2_lead .
-         "', `word_number` = '" . $this->game->word_number .
+         "', `score1` = '" . $this->game->score1 .
+         "', `score2` = '" . $this->game->score2 .
+         "', `start_round_at` = " . $start_round_at .
+         ", `dictionary_id` = '" . $this->game->dictionary_id .
+         "', `language` = '" . $this->game->language .
+         "', `round_time` = '" . $this->game->round_time .
+         "', `mode` = " . $this->game->mode .
+         ", `word_number` = '" . $this->game->word_number .
          "', `word_list` = '" . json_encode($this->game->word_list, JSON_UNESCAPED_UNICODE) .
          "' WHERE `id` = " . $this->game->id . ";";
         $result = $this->MYSQLI->query($sql); 
     
         return $result;
     }
-
-    public function save_word_description($dictionary, $word, $desc) {
+ 
+    public function save_word_description($did, $word, $desc) {
         // ищем id словаря
-        $sql = "SELECT `id` FROM `dictionaries_name` WHERE `dictionary_name` = '" . $dictionary . "';";
-        $result = $this->MYSQLI->query($sql);
-        if ($result->num_rows < 1) {
-            $this->gen_list = [];
-            return [];
-        }
-        $row = $result->fetch_row();
-        $did = $row[0];
-
         $sql = "UPDATE `dictionaries` SET `description`='" . $desc . "' WHERE `word` = '" . $word . "' AND `dictionary_id` = " . $did . ";";
         $result = $this->MYSQLI->query($sql);
         return $result;
@@ -145,6 +147,20 @@ class AliasClass
           }
         }
     }
+   
+    public function left_time() {
+        $result = "0";
+        $now = new DateTimeImmutable();
+        $startedAt = new DateTimeImmutable($this->game->start_round_at);
+        $sec = $this->game->round_time;
+        $finishedAt = $startedAt->add(new DateInterval('PT' . $sec . 'S'));
+        $interval = date_diff($now, $finishedAt);
+        if ($now < $finishedAt) {
+            $result = $interval->format('%i:%s');
+        }
+        return $result;
+    }
+
 }
 
 ?>
