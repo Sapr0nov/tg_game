@@ -24,6 +24,8 @@ if ($LANG == 'ru') {
     $BTNS['end_game'] = "Завершить игру"; 
     $BTNS['next_round'] = "Следующий раунд";
     
+    $BTNS['reset'] = "Сброс";
+
     $BTNS['guessed'] = 'Угадали';
     $BTNS['skip'] = 'Пропустить';
     $BTNS['desc'] = "Значение";
@@ -31,6 +33,7 @@ if ($LANG == 'ru') {
     $RETURNTXT['selectAction'] = "Выберите дейстие:";
     $RETURNTXT['rules'] = "Игра для 4х и более человек. Игроки делаятся на две команды и пытаются объяснить друг другу слова. Следуйте подсказкам на экране";
     $RETURNTXT['developing'] = "В разработке";
+    $RETURNTXT['chose_dictionary'] = "Выберите словарь:";
     $RETURNTXT['enter_room'] = "Введите номер комнаты:";
     $RETURNTXT['roomCreated'] = "Создана комната №";
     $RETURNTXT['roomPswd'] = "пароль - ";
@@ -42,7 +45,7 @@ if ($LANG == 'ru') {
     $RETURNTXT['nextWord'] = "Следующее слово:";
     $RETURNTXT['changeWord'] = "Слово на замену:";
     $RETURNTXT['word_limit'] = "Вы перебрали все отведенные вам слова";
-
+    $RETURNTXT['time_limit'] = "Время раунда завершено";
 }
 
 if ($LANG == 'en') {
@@ -68,6 +71,8 @@ if ($LANG == 'en') {
     $BTNS['changeDict'] = "change Dictionary";
     $BTNS['end_game'] = "Finish game"; 
     $BTNS['next_round'] = "Next round";
+    
+    $BTNS['reset'] = "Reset";
 
     $BTNS['guessed'] = 'Guessed';
     $BTNS['skip'] = 'Skip';
@@ -76,6 +81,7 @@ if ($LANG == 'en') {
     $RETURNTXT['selectAction'] = "Select an action:";
     $RETURNTXT['rules'] = "A game for 4 or more people. Players are divided into two teams and try to explain words to each other. Follow the prompts on the screen";
     $RETURNTXT['developing'] = "In developing";
+    $RETURNTXT['chose_dictionary'] = "Chose a dictionary:";
     $RETURNTXT['enter_room'] = "Enter room number:";
     $RETURNTXT['roomCreated'] = "Created room №";
     $RETURNTXT['roomPswd'] = "password - ";
@@ -87,7 +93,7 @@ if ($LANG == 'en') {
     $RETURNTXT['nextWord'] = "Next word";
     $RETURNTXT['changeWord'] = "Another word:";
     $RETURNTXT['word_limit'] = "Ok, word list is out.";
-
+    $RETURNTXT['time_limit'] = "Round time is out.";
 }
 
 ?>

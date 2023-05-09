@@ -31,7 +31,7 @@ class AliasClass
 
     public function get_game($id) {
         $this->game = new stdClass();
-        $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `score1`, `score2`, `word_number`, `word_list`, `owner_id`, `dictionary_id`, `language`, `round_time`, `mode`, `start_round_at` FROM `games` WHERE `id` = " . $id . ";";
+        $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `score1`, `score2`, `word_number`, `word_list`, `owner_id`, `dictionary_id`, `language`, `round_time`, `mode`, `start_round_at`, `status` FROM `games` WHERE `id` = " . $id . ";";
         $result = $this->MYSQLI->query($sql); 
         if ($result->num_rows < 1) {
             $this->game->error = "game not found" . $sql;
@@ -46,6 +46,7 @@ class AliasClass
         $this->game->round_time = $row[13];
         $this->game->mode = $row[14];
         $this->game->start_round_at = $row[15];
+        $this->game->status = $row[16];
         $this->game->team1 = json_decode($row[1]);
         $this->game->team2 = json_decode($row[2]);
         $this->game->team1->players = array_unique($this->game->team1->players);
@@ -59,6 +60,19 @@ class AliasClass
         $this->game->word_number = $row[8];
         $this->game->word_list = json_decode($row[9]);
     
+        $sql = "SELECT `id`, `dictionary_name` FROM `dictionaries_name`;";
+        $result = $this->MYSQLI->query($sql); 
+        if ($result->num_rows < 1) {
+            $this->game->error = "dictionaries not found";
+            return NULL;
+        }
+        $dictionaries = [];
+        $dictionary = new stdClass();
+        while ($row = $result->fetch_row()) {
+            $dictionaries[] = (object) array('id' => $row[0], 'name' => $row[1]);
+        }
+        $this->game->dictionaries = $dictionaries;
+    
         return $game;
     }
     public function save_game() {
@@ -66,6 +80,11 @@ class AliasClass
             $start_round_at = 'NULL';
         }else{
             $start_round_at = "'" . $this->game->start_round_at . "'";
+        }
+        if ($this->game->status == '') {
+            $status = 'NULL';
+        }else{
+            $status = "'" . $this->game->status . "'";
         }
         $sql = "UPDATE `games` SET " .
          "`team1` = '" . json_encode($this->game->team1) .
@@ -76,10 +95,11 @@ class AliasClass
          "', `score1` = '" . $this->game->score1 .
          "', `score2` = '" . $this->game->score2 .
          "', `start_round_at` = " . $start_round_at .
-         ", `dictionary_id` = '" . $this->game->dictionary_id .
-         "', `language` = '" . $this->game->language .
+         ", `dictionary_id` = " . $this->game->dictionary_id .
+         ", `language` = '" . $this->game->language .
          "', `round_time` = '" . $this->game->round_time .
          "', `mode` = " . $this->game->mode .
+         ", `status` = " . $status .
          ", `word_number` = '" . $this->game->word_number .
          "', `word_list` = '" . json_encode($this->game->word_list, JSON_UNESCAPED_UNICODE) .
          "' WHERE `id` = " . $this->game->id . ";";
@@ -89,7 +109,6 @@ class AliasClass
     }
  
     public function save_word_description($did, $word, $desc) {
-        // ищем id словаря
         $sql = "UPDATE `dictionaries` SET `description`='" . $desc . "' WHERE `word` = '" . $word . "' AND `dictionary_id` = " . $did . ";";
         $result = $this->MYSQLI->query($sql);
         return $result;
@@ -148,6 +167,21 @@ class AliasClass
         }
     }
    
+    public function select_dictionary_by_name($dictionary_name) {
+        $sql = "SELECT `id` FROM `dictionaries_name` WHERE `dictionary_name` = '" . $dictionary_name . "';";
+        $result = $this->MYSQLI->query($sql); 
+        if ($result->num_rows < 1) {
+            $this->game->error = "dictionaries not found";
+            return "Словарь не найден.";
+        }else{
+            $row = $result->fetch_row();
+            $this->game->dictionary_id = $row[0];
+            $this->game->status = 1;
+            $this->save_game();
+            return "Выбран словарь: " . $dictionary_name;
+        }
+    }
+
     public function left_time() {
         $result = "0";
         $now = new DateTimeImmutable();
