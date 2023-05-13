@@ -72,8 +72,7 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         $sql = "DELETE FROM `users` WHERE `tid` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
         $result = $mysqli->query($sql); 
 
-        $text_return = $RETURNTXT['selectAction'];
-        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup_start);
+        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $RETURNTXT['selectAction'], $reply_markup_start);
         return; 
     }
 
@@ -87,8 +86,7 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         $sql = "DELETE FROM `messages` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
         $result = $mysqli->query($sql); 
 
-        $text_return = $RETURNTXT['selectAction'];
-        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup_start);
+        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $RETURNTXT['selectAction'], $reply_markup_start);
         return; 
     }
     if ($tgBot->MSG_INFO["text"] == $BTNS['clear']) {
@@ -100,8 +98,7 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
         $sql = "DELETE FROM `messages` WHERE `chat_id` = '" . $tgBot->MSG_INFO["chat_id"] . "'";
         $result = $mysqli->query($sql); 
 
-        $text_return = $RETURNTXT['selectAction'];
-        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return, $reply_markup_start);
+        $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $RETURNTXT['selectAction'], $reply_markup_start);
         return; 
     }
     if ($tgBot->MSG_INFO["text"] == $BTNS['rules']) {
@@ -410,8 +407,7 @@ if ($tgBot->MSG_INFO['msg_type'] == 'message') {
     };
 
     // любое другое сообщение удаляем и предлагаем сделать выбор
-    $text_return = "выберите дейстие:";
-    $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $text_return . json_encode($matches), $reply_markup_start);
+    $tgBot->msg_to_tg($tgBot->MSG_INFO["chat_id"], $RETURNTXT['selectAction'], $reply_markup_start);
     $tgBot->delete_msg_tg($tgBot->MSG_INFO["chat_id"], $tgBot->MSG_INFO["message_id"]);
 }
 

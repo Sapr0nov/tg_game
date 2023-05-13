@@ -30,11 +30,14 @@ class AliasClass
     }
 
     public function get_game($id) {
+        if (!$id) {
+            return;   
+        }
         $this->game = new stdClass();
         $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `score1`, `score2`, `word_number`, `word_list`, `owner_id`, `dictionary_id`, `language`, `round_time`, `mode`, `start_round_at`, `status` FROM `games` WHERE `id` = " . $id . ";";
         $result = $this->MYSQLI->query($sql); 
         if ($result->num_rows < 1) {
-            $this->game->error = "game not found" . $sql;
+            $this->game->error = "game not found";
             return NULL;
         }
         $row = $result->fetch_row();
