@@ -137,7 +137,7 @@ class TgBotClass
         return json_encode(array(
             'keyboard' => $arr,
             'resize_keyboard' => true, 
-            'one_time_keyboard' => true
+            'one_time_keyboard' => false
             )
         );
     }
