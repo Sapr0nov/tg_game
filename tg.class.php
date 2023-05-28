@@ -22,7 +22,7 @@ class TgBotClass
     public function register_web_hook($path) {
         $ch = curl_init();
         $ch_post = [
-            CURLOPT_URL => 'https://api.telegram.org/' . $this->BOT_TOKEN . '/setWebhook?url=' . $path,
+            CURLOPT_URL => 'https://api.telegram.org/bot' . $this->BOT_TOKEN . '/setWebhook?url=' . $path,
             CURLOPT_POST => TRUE,
             CURLOPT_RETURNTRANSFER => TRUE,
             CURLOPT_TIMEOUT => 10,
