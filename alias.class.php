@@ -37,7 +37,7 @@ class AliasClass
         $sql = "SELECT `id`, `team1`, `team2`, `active_team`, `team1_lead`, `team2_lead`, `score1`, `score2`, `word_number`, `word_list`, `owner_id`, `dictionary_id`, `language`, `round_time`, `mode`, `start_round_at`, `status` FROM `games` WHERE `id` = " . $id . ";";
         $result = $this->MYSQLI->query($sql); 
         if ($result->num_rows < 1) {
-            $this->game->error = "game not found";
+            $this->game->error = "Игра не найдена. Попробуйте команду - Очистить чат";
             return NULL;
         }
         $row = $result->fetch_row();
@@ -78,6 +78,7 @@ class AliasClass
     
         return $game;
     }
+
     public function save_game() {
         if ($this->game->start_round_at == '') {
             $start_round_at = 'NULL';
@@ -175,7 +176,7 @@ class AliasClass
         $result = $this->MYSQLI->query($sql); 
         if ($result->num_rows < 1) {
             $this->game->error = "dictionaries not found";
-            return "Словарь не найден.";
+            return 404;
         }else{
             $row = $result->fetch_row();
             $this->game->dictionary_id = $row[0];
@@ -197,6 +198,20 @@ class AliasClass
         }
         return $result;
     }
+
+    public function get_user_name($id) {
+        $sql = "SELECT `username`, `first_name`, `last_name` FROM `users` WHERE `tid` = " . $id . ";";
+        $result = $this->MYSQLI->query($sql); 
+        if ($result->num_rows < 1) {
+            $this->game->error = "user not found";
+            return "404";
+        }else{
+            $row = $result->fetch_row();
+            $user_name = ($row[0] != "") ? $row[0] : $row[1] . " " . $row[2];
+        return $user_name;
+        }
+    }
+
 
 }
 
